@@ -4,9 +4,14 @@ from ultralytics import YOLO
 import argparse
 import os
 from flask_cors import CORS
+from flask_socketio import SocketIO
+import json
+import threading
 
 app = Flask(__name__, static_folder='frontend/build')
 CORS(app)  # 添加CORS支持
+# 修改socketio初始化，使用threading模式
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')  # 初始化SocketIO
 
 # 添加静态视频文件目录，使用绝对路径
 VIDEOS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
@@ -22,66 +27,81 @@ frame_count = 0
 threshold = 5  # 连续帧数阈值
 
 def send_message(cls_id, score, label):
-    # 这里可以替换为发送消息的代码，例如通过 WebSocket 或日志
-    print(f"cls_id: {cls_id}")
-    print(f"Score: {score}")
-    print(f"Label: {label}")
+    # 通过WebSocket发送检测结果
+    detection_data = {
+        'cls_id': int(cls_id),
+        'score': float(score),
+        'label': label
+    }
+    print(f"发送检测结果: {detection_data}")
+    socketio.emit('detection_result', detection_data)
 
 def generate_frames(camera_id):
-    video_cap = cv2.VideoCapture(camera_id)
-    if not video_cap.isOpened():
-        print(f"无法打开摄像头 {camera_id}")
-        return
+    video_cap = None
+    try:
+        video_cap = cv2.VideoCapture(camera_id)
+        if not video_cap.isOpened():
+            print(f"无法打开摄像头 {camera_id}")
+            return
 
-    global last_cls_id, frame_count
+        global last_cls_id, frame_count
 
-    # 设置摄像头分辨率为640x480
-    video_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # 设置摄像头分辨率为640x480
+        video_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-    while video_cap.isOpened():
-        success, frame = video_cap.read()
-        if not success:
-            break
+        while video_cap.isOpened():
+            success, frame = video_cap.read()
+            if not success:
+                break
 
-        # 确保帧的尺寸是640x480
-        frame = cv2.resize(frame, (640, 480))
+            # 确保帧的尺寸是640x480
+            frame = cv2.resize(frame, (640, 480))
 
-        # 设置置信度
-        conf = 0.8
-        # 进行 YOLO 预测
-        results = model.predict(frame, conf=conf, verbose=False)
-        
-        for result in results:
-            # 绘制检测结果到帧上
-            frame = result.plot()
-            # 取出结果的类别、置信度、标签
-            boxes = result.boxes
-            for box in boxes:
-                cls_id = int(box.cls.item())
-                score = box.conf.item()
-                label = model.names[cls_id]
+            # 设置置信度
+            conf = 0.8
+            try:
+                # 进行 YOLO 预测
+                results = model.predict(frame, conf=conf, verbose=False)
+                
+                for result in results:
+                    # 绘制检测结果到帧上
+                    frame = result.plot()
+                    # 取出结果的类别、置信度、标签
+                    boxes = result.boxes
+                    for box in boxes:
+                        cls_id = int(box.cls.item())
+                        score = box.conf.item()
+                        label = model.names[cls_id]
 
-                # 检测连续相同的 cls_id
-                if cls_id == last_cls_id:
-                    frame_count += 1
-                else:
-                    last_cls_id = cls_id
-                    frame_count = 1
-                # 如果连续帧数超过阈值，发送消息
-                if frame_count >= threshold:
-                    send_message(cls_id, score, label)
-                    frame_count = 0  # 重置计数器
+                        # 检测连续相同的 cls_id
+                        if cls_id == last_cls_id:
+                            frame_count += 1
+                        else:
+                            last_cls_id = cls_id
+                            frame_count = 1
+                        # 如果连续帧数超过阈值，发送消息
+                        if frame_count >= threshold:
+                            send_message(cls_id, score, label)
+                            frame_count = 0  # 重置计数器
+            except Exception as e:
+                print(f"预测过程中发生错误: {e}")
 
-        # 将帧编码为 JPEG 格式
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
+            # 将帧编码为 JPEG 格式
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
 
-        # 生成 MJPEG 流
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            # 生成 MJPEG 流
+            yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
-    video_cap.release()
+    except Exception as e:
+        print(f"视频流处理过程中发生错误: {e}")
+    finally:
+        # 确保释放摄像头资源
+        if video_cap is not None and video_cap.isOpened():
+            video_cap.release()
+            print(f"摄像头 {camera_id} 资源已释放")
 
 @app.route('/video_feed')
 def video_feed():
@@ -108,8 +128,20 @@ def serve(path):
     else:
         return send_from_directory(app.static_folder, 'index.html')
 
+# 添加WebSocket事件处理
+@socketio.on('connect')
+def handle_connect():
+    print('客户端已连接')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('客户端已断开连接')
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='垃圾检测 Flask 后端')
     parser.add_argument('--port', type=int, default=5000, help='Flask 端口 (默认: 5000)')
     args = parser.parse_args()
-    app.run(host='0.0.0.0', port=args.port, debug=True)
+    
+    # 使用threading模式运行
+    print("使用threading模式启动服务器...")
+    socketio.run(app, host='0.0.0.0', port=args.port, debug=True, allow_unsafe_werkzeug=True)

@@ -45,6 +45,18 @@
    npm run build
    ```
 
+### 注意事项
+
+如果在 Windows PowerShell 中运行 npm 命令时遇到执行策略错误，请先运行以下命令临时允许脚本执行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+然后再尝试运行 npm 命令。此设置仅对当前 PowerShell 会话有效。
+
+或者，您可以使用命令提示符(CMD)来代替 PowerShell 运行 npm 命令，这样就不会遇到执行策略问题。
+
 ## 使用方法
 
 1. 启动后端和前端
@@ -61,4 +73,4 @@
 
 ## 效果预览
 
-![preview](assets/images/preview.png)
+![preview](assets/images/preview2.png)

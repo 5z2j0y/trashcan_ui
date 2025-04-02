@@ -27,12 +27,13 @@ function VideoStream({ isDetecting, cameraId, streamKey }) {
   }, [isDetecting, promoVideoUrl]);
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12} md={isDetecting ? 6 : 12}>
+    <Grid container spacing={3} direction="column">
+      {/* 宣传视频始终在上方 */}
+      <Grid item xs={12}>
         <Paper elevation={3}>
           <Box p={2}>
             <Typography variant="h6" gutterBottom>
-              {isDetecting ? '垃圾检测' : '宣传视频'}
+              宣传视频
             </Typography>
             <Box 
               sx={{ 
@@ -42,44 +43,33 @@ function VideoStream({ isDetecting, cameraId, streamKey }) {
                 height: '480px'
               }}
             >
-              {isDetecting ? (
-                <img 
-                  src={videoFeedUrl} 
-                  alt="视频流"
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '100%', 
-                    objectFit: 'contain' 
-                  }}
-                />
-              ) : (
-                <video
-                  ref={mainVideoRef}
-                  src={promoVideoUrl}
-                  autoPlay
-                  muted
-                  loop
-                  controls
-                  playsInline
-                  preload="auto"
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '100%', 
-                    objectFit: 'contain' 
-                  }}
-                />
-              )}
+              <video
+                ref={isDetecting ? secondaryVideoRef : mainVideoRef}
+                src={promoVideoUrl}
+                autoPlay
+                muted
+                loop
+                controls
+                playsInline
+                preload="auto"
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '100%', 
+                  objectFit: 'contain' 
+                }}
+              />
             </Box>
           </Box>
         </Paper>
       </Grid>
       
+      {/* 垃圾检测视频在下方，仅当检测开始时显示 */}
       {isDetecting && (
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <Paper elevation={3}>
             <Box p={2}>
               <Typography variant="h6" gutterBottom>
-                宣传视频
+                垃圾检测
               </Typography>
               <Box 
                 sx={{ 
@@ -89,15 +79,9 @@ function VideoStream({ isDetecting, cameraId, streamKey }) {
                   height: '480px'
                 }}
               >
-                <video
-                  ref={secondaryVideoRef}
-                  src={promoVideoUrl}
-                  autoPlay
-                  muted
-                  loop
-                  controls
-                  playsInline
-                  preload="auto"
+                <img 
+                  src={videoFeedUrl} 
+                  alt="视频流"
                   style={{ 
                     maxWidth: '100%', 
                     maxHeight: '100%', 

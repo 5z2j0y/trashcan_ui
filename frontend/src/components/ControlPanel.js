@@ -12,7 +12,8 @@ import {
   Typography,
   Badge,
   Collapse,
-  IconButton
+  IconButton,
+  Chip
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
@@ -26,7 +27,8 @@ const ControlPanel = ({
   onStartDetection, 
   onStopDetection, 
   onCameraChange,
-  currentCameraId
+  currentCameraId,
+  socketConnected = false
 }) => {
   // 添加折叠状态
   const [expanded, setExpanded] = useState(true);
@@ -60,9 +62,16 @@ const ControlPanel = ({
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: expanded ? 2 : 0 }}>
-        <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
-          摄像头控制面板
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h6" gutterBottom sx={{ mb: 0, mr: 2 }}>
+            摄像头控制面板
+          </Typography>
+          <Chip 
+            label={socketConnected ? "服务已连接" : "服务未连接"} 
+            color={socketConnected ? "success" : "error"}
+            size="small"
+          />
+        </Box>
         <IconButton onClick={toggleExpanded} size="small">
           {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </IconButton>
@@ -128,12 +137,17 @@ const ControlPanel = ({
                   startIcon={<PlayArrowIcon />}
                   onClick={onStartDetection}
                   fullWidth
-                  disabled={currentCameraId === null}
+                  disabled={currentCameraId === null || !socketConnected}
                 >
                   开始检测
                 </Button>
               )}
             </Box>
+            {!socketConnected && (
+              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                服务未连接，无法开始检测
+              </Typography>
+            )}
           </Grid>
         </Grid>
       </Collapse>
