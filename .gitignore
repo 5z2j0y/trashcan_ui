@@ -1,2 +1,5 @@
+// filepath: e:\github_projects\trashcan_ui\.gitignore
 __pycache__/
-frontend/node_modules
+frontend/node_modules/
+node_modules/
+frontend/build/static/
