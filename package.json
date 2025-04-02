@@ -1,0 +1,14 @@
+{
+  "name": "trashcan-ui-project",
+  "version": "1.0.0",
+  "description": "垃圾检测系统项目",
+  "scripts": {
+    "start:frontend": "cd frontend && npm start",
+    "build:frontend": "cd frontend && npm run build",
+    "start:backend": "python app.py",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

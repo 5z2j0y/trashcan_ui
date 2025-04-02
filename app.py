@@ -1,188 +1,147 @@
-import tkinter as tk
-from tkinter import ttk
-import threading
-import time
-import os
+from flask import Flask, Response, request, send_from_directory
 import cv2
+from ultralytics import YOLO
+import argparse
+import os
+from flask_cors import CORS
+from flask_socketio import SocketIO
+import json
+import threading
 
-from detector import TrashDetector
-from gui.log_panel import ResultPanel, ArduinoPanel
-from gui.video_panel import VideoPanel
-from gui.control_panel import ControlPanel
+app = Flask(__name__, static_folder='frontend/build')
+CORS(app)  # 添加CORS支持
+# 修改socketio初始化，使用threading模式
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')  # 初始化SocketIO
 
-class TrashCanApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("垃圾分类检测系统")
-        self.root.geometry("1200x700")  # 设置窗口大小
-        self.root.resizable(True, True)
-        
-        # 创建主框架
-        self.main_frame = ttk.Frame(root)
-        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # 创建演示视频面板 - 位于顶部
-        self.demo_panel = VideoPanel(self.main_frame, title="演示视频")
-        self.demo_panel.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        
-        # 创建实时视频显示面板 - 位于演示视频下方
-        self.video_panel = VideoPanel(self.main_frame, title="实时检测")
-        self.video_panel.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
-        
-        # 创建检测结果面板 - 位于右侧上方
-        self.result_panel = ResultPanel(self.main_frame)
-        self.result_panel.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
-        
-        # 创建Arduino通信面板 - 位于右侧下方
-        self.arduino_panel = ArduinoPanel(self.main_frame)
-        self.arduino_panel.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
-        
-        # 创建控制按钮面板 - 位于底部
-        self.control_panel = ControlPanel(
-            self.main_frame,
-            on_start=self.start_detection,
-            on_stop=self.stop_detection,
-            on_clear=self.clear_logs
-        )
-        self.control_panel.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
-        
-        # 配置网格权重 - 调整为上下布局
-        self.main_frame.columnconfigure(0, weight=2)  # 视频区域
-        self.main_frame.columnconfigure(1, weight=1)  # 日志区域
-        self.main_frame.rowconfigure(0, weight=1)     # 顶部行
-        self.main_frame.rowconfigure(1, weight=1)     # 中间行
-        
-        # 检测器和视频变量
-        self.detector = None
-        self.is_running = False
-        self.detection_thread = None
-        self.demo_thread = None
-        
-        # 加载垃圾类别名称
-        self.load_class_names()
-        
-        # 启动演示视频播放
-        self.start_demo_video()
-        
-    def load_class_names(self):
-        self.class_names = []
-        try:
-            with open("trash.names", "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("//"):
-                        self.class_names.append(line)
-            self.result_panel.log(f"已加载 {len(self.class_names)} 种垃圾类别")
-        except Exception as e:
-            self.result_panel.log(f"加载类别名称失败: {e}")
-    
-    def clear_logs(self):
-        """清空日志文本框"""
-        self.result_panel.clear()
-        self.arduino_panel.clear()
-    
-    def start_detection(self):
-        """开始检测"""
-        if self.detection_thread and self.detection_thread.is_alive():
+# 添加静态视频文件目录，使用绝对路径
+VIDEOS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos')
+app.config['VIDEOS_FOLDER'] = VIDEOS_DIR
+print(f"视频文件目录绝对路径: {VIDEOS_DIR}")
+
+# 加载模型
+model = YOLO("models/trashcan.pt")
+
+# 全局变量
+last_cls_id = None
+frame_count = 0
+threshold = 5  # 连续帧数阈值
+
+def send_message(cls_id, score, label):
+    # 通过WebSocket发送检测结果
+    detection_data = {
+        'cls_id': int(cls_id),
+        'score': float(score),
+        'label': label
+    }
+    print(f"发送检测结果: {detection_data}")
+    socketio.emit('detection_result', detection_data)
+
+def generate_frames(camera_id):
+    video_cap = None
+    try:
+        video_cap = cv2.VideoCapture(camera_id)
+        if not video_cap.isOpened():
+            print(f"无法打开摄像头 {camera_id}")
             return
-        
-        self.is_running = True
-        self.detector = TrashDetector(
-            on_detection=self.on_detection_callback,
-            on_arduino=self.on_arduino_callback,
-            camera_id=0  # 使用webcam1进行检测
-        )
-        
-        self.detection_thread = threading.Thread(target=self.detection_loop)
-        self.detection_thread.daemon = True
-        self.detection_thread.start()
-        
-        self.result_panel.log("开始检测...")
-    
-    def stop_detection(self):
-        """停止检测"""
-        self.is_running = False
-        if self.detector:
-            self.detector.release()
-        
-        self.result_panel.log("检测已停止")
-    
-    def detection_loop(self):
-        """检测循环"""
-        try:
-            self.detector.setup()
-            while self.is_running:
-                frame = self.detector.process_frame()
-                if frame is not None:
-                    self.video_panel.update(frame)
-                else:
-                    break
-        except Exception as e:
-            self.result_panel.log(f"检测过程出错: {e}")
-        finally:
-            if self.is_running:
-                self.stop_detection()
-    
-    def start_demo_video(self):
-        """开始播放演示视频"""
-        self.demo_thread = threading.Thread(target=self.demo_video_loop)
-        self.demo_thread.daemon = True
-        self.demo_thread.start()
-        
-    def demo_video_loop(self):
-        """演示视频循环播放"""
-        video_path = "videos/demo_cropped.mp4"
-        
-        while True:
-            if not os.path.exists(video_path):
-                self.result_panel.log(f"演示视频文件不存在: {video_path}")
-                time.sleep(5)
-                continue
-                
-            cap = cv2.VideoCapture(video_path)
-            if not cap.isOpened():
-                self.result_panel.log("无法打开演示视频")
-                time.sleep(5)
-                continue
-                
-            self._play_video(cap)
-    
-    def _play_video(self, cap):
-        """播放视频的通用方法"""
-        try:
-            while cap.isOpened():
-                success, frame = cap.read()
-                if not success:
-                    break
-                    
-                self.demo_panel.update(frame)
-                # 控制播放速度
-                time.sleep(0.03)
-        except Exception as e:
-            self.result_panel.log(f"视频播放出错: {e}")
-        finally:
-            cap.release()
-    
-    def on_detection_callback(self, cls_id, score):
-        """检测回调函数"""
-        if 0 <= cls_id < len(self.class_names):
-            class_name = self.class_names[cls_id]
-            self.result_panel.log_detection(class_name, score)
-        else:
-            self.result_panel.log_unknown(cls_id, score)
-    
-    def on_arduino_callback(self, cls_id):
-        """Arduino通信回调函数"""
-        if 0 <= cls_id < len(self.class_names):
-            class_name = self.class_names[cls_id]
-            self.arduino_panel.log_send(class_name, cls_id)
-        else:
-            self.arduino_panel.log_unknown_send(cls_id)
 
-def main():
-    root = tk.Tk()
-    app = TrashCanApp(root)
-    root.mainloop()
+        global last_cls_id, frame_count
+
+        # 设置摄像头分辨率为640x480
+        video_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+        while video_cap.isOpened():
+            success, frame = video_cap.read()
+            if not success:
+                break
+
+            # 确保帧的尺寸是640x480
+            frame = cv2.resize(frame, (640, 480))
+
+            # 设置置信度
+            conf = 0.8
+            try:
+                # 进行 YOLO 预测
+                results = model.predict(frame, conf=conf, verbose=False)
+                
+                for result in results:
+                    # 绘制检测结果到帧上
+                    frame = result.plot()
+                    # 取出结果的类别、置信度、标签
+                    boxes = result.boxes
+                    for box in boxes:
+                        cls_id = int(box.cls.item())
+                        score = box.conf.item()
+                        label = model.names[cls_id]
+
+                        # 检测连续相同的 cls_id
+                        if cls_id == last_cls_id:
+                            frame_count += 1
+                        else:
+                            last_cls_id = cls_id
+                            frame_count = 1
+                        # 如果连续帧数超过阈值，发送消息
+                        if frame_count >= threshold:
+                            send_message(cls_id, score, label)
+                            frame_count = 0  # 重置计数器
+            except Exception as e:
+                print(f"预测过程中发生错误: {e}")
+
+            # 将帧编码为 JPEG 格式
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+
+            # 生成 MJPEG 流
+            yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+    except Exception as e:
+        print(f"视频流处理过程中发生错误: {e}")
+    finally:
+        # 确保释放摄像头资源
+        if video_cap is not None and video_cap.isOpened():
+            video_cap.release()
+            print(f"摄像头 {camera_id} 资源已释放")
+
+@app.route('/video_feed')
+def video_feed():
+    # 从请求参数中获取摄像头 ID，默认为 0
+    camera_id = request.args.get('camera', default=0, type=int)
+    return Response(generate_frames(camera_id),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+# 修改视频文件访问路由以支持跨源请求和正确的MIME类型
+@app.route('/videos/<path:filename>')
+def serve_video(filename):
+    response = send_from_directory(app.config['VIDEOS_FOLDER'], filename)
+    response.headers['Content-Type'] = 'video/mp4'
+    response.headers['Accept-Ranges'] = 'bytes'
+    print(f"提供视频文件: {os.path.join(app.config['VIDEOS_FOLDER'], filename)}")
+    return response
+
+# 添加前端静态文件服务
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+
+# 添加WebSocket事件处理
+@socketio.on('connect')
+def handle_connect():
+    print('客户端已连接')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('客户端已断开连接')
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='垃圾检测 Flask 后端')
+    parser.add_argument('--port', type=int, default=5000, help='Flask 端口 (默认: 5000)')
+    args = parser.parse_args()
+    
+    # 使用threading模式运行
+    print("使用threading模式启动服务器...")
+    socketio.run(app, host='0.0.0.0', port=args.port, debug=True, allow_unsafe_werkzeug=True)

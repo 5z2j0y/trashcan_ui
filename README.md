@@ -1,49 +1,76 @@
-# 垃圾分类检测系统
+# 垃圾检测系统
 
-这是一个基于YOLO和tkinter的垃圾分类检测系统，可以实时检测并分类不同种类的垃圾。
+这是一个基于 YOLOv8 的垃圾检测系统，包含 Flask 后端和 React 前端。
 
 ## 功能特点
 
-- 实时视频检测与显示
-- 左侧垃圾分类宣传视频播放
-- 基于YOLO的目标检测
-- Arduino通信接口
-- 用户友好的图形界面
-- 检测结果与通信日志记录
+- 实时垃圾检测与分类
+- 美观的用户界面
+- 多摄像头支持
+- 开始/停止检测控制
 
-## 安装与使用
+## 安装与运行
 
-1. 安装依赖包
+### 后端
 
-```bash
-pip install -r requirements.txt
+1. 安装依赖：
+   ```
+   pip install -r requirements.txt
+   ```
+
+2. 运行后端：
+   ```
+   python app.py
+   ```
+
+### 前端
+
+1. 进入前端目录：
+   ```
+   cd frontend
+   ```
+
+2. 安装依赖：
+   ```
+   npm install
+   ```
+
+3. 开发环境运行：
+   ```
+   npm start
+   ```
+
+4. 构建生产版本：
+   ```
+   npm run build
+   ```
+
+### 注意事项
+
+如果在 Windows PowerShell 中运行 npm 命令时遇到执行策略错误，请先运行以下命令临时允许脚本执行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
-2. 运行应用
+然后再尝试运行 npm 命令。此设置仅对当前 PowerShell 会话有效。
 
-```bash
-python app.py
-```
+或者，您可以使用命令提示符(CMD)来代替 PowerShell 运行 npm 命令，这样就不会遇到执行策略问题。
 
-3. 命令行模式运行检测器
+## 使用方法
 
-```bash
-python detect_pc.py
-```
-
-## 项目结构
-
-- `app.py` - 主应用程序（GUI界面）
-- `detector.py` - 检测器模块
-- `detect_pc.py` - 命令行检测脚本
-- `models/trashcan.pt` - YOLO模型文件
-- `trash.names` - 垃圾类别名称文件
-- `videos/demo.mp4` - 垃圾分类宣传视频
+1. 启动后端和前端
+2. 在浏览器中打开 http://localhost:3000 (开发) 或 http://localhost:5000 (生产)
+3. 使用界面上的控制按钮开始/停止检测
+4. 可以通过下拉菜单切换不同的摄像头
 
 ## 系统要求
 
-- Python 3.7+
-- OpenCV
-- PyTorch
-- Ultralytics YOLO
-- 一个摄像头(webcam1)
+- Python 3.8+
+- Node.js 14+
+- 摄像头或视频设备
+
+
+## 效果预览
+
+![preview](assets/images/preview2.png)

@@ -2,19 +2,23 @@ import cv2
 from ultralytics import YOLO
 import argparse
 
+
+
 def main():
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='垃圾检测程序')
     parser.add_argument('--headless', action='store_true', help='以无界面模式运行')
-    parser.add_argument('--camera', type=int, default=1, help='摄像头ID (默认: 1)')
+    parser.add_argument('--camera', type=int, default=0, help='摄像头ID (默认: 0)')
     args = parser.parse_args()
     
     # 加载模型
-    model = YOLO("models/trashcan.pt", verbose=False) 
+    model = YOLO("models/trashcan.pt") 
 
-    # 定义发送到Arduino的函数
-    def send_to_arduino(cls_id):
-        print(f"Sending to Arduino: {cls_id}")
+    def send_message(cls_id, score, label):
+        # 这里可以替换为发送消息的代码
+        print(f"cls_id: {cls_id}")
+        print(f"Score: {score}")
+        print(f"Label: {label}")
 
     # 打开视频捕捉，默认使用摄像头1
     video_cap = cv2.VideoCapture(args.camera)
@@ -53,9 +57,9 @@ def main():
                 else:
                     last_cls_id = cls_id
                     frame_count = 1
-                # 如果连续帧数超过阈值, 发送到Arduino
+                # 如果连续帧数超过阈值, 发送消息
                 if frame_count >= threshold:
-                    send_to_arduino(cls_id)
+                    send_message(cls_id, score, label)
                     frame_count = 0  # 重置计数器
 
         # 如果不是无界面模式，显示图像
