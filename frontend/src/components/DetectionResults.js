@@ -50,10 +50,10 @@ const trashCategoryMap = {
 
 // 垃圾分类颜色映射
 const categoryColorMap = {
-  '可回收垃圾': 'primary', // 蓝色
-  '有害垃圾': 'error', // 红色
-  '厨余垃圾': 'success', // 绿色
-  '其他垃圾': 'warning' // 橙色
+  '可回收垃圾': '#0074d9', // 蓝色
+  '有害垃圾': '#ff4136',  // 红色
+  '厨余垃圾': '#2ecc40',  // 绿色
+  '其他垃圾': '#ff851b'   // 橙色
 };
 
 const DetectionResults = ({ results = [], onClearResults }) => {
@@ -116,31 +116,60 @@ const DetectionResults = ({ results = [], onClearResults }) => {
       <Collapse in={showAlert && !expanded}>
         <Alert 
           severity="info" 
-          sx={{ mb: 2 }}
+          sx={{ 
+            mb: 2,
+            backgroundColor: 'rgba(163, 216, 244, 0.2)',
+            color: 'var(--text-primary)',
+            '& .MuiAlert-icon': {
+              color: 'var(--primary-color)'
+            }
+          }}
           onClose={() => setShowAlert(false)}
         >
           有新的检测结果，点击展开查看
         </Alert>
       </Collapse>
       
-      <Paper elevation={3} sx={{ mb: 3 }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          mb: 3, 
+          borderRadius: '16px',
+          overflow: 'hidden',
+          border: '1px solid var(--border-color)',
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-5px)',
+            boxShadow: '0 8px 20px rgba(163, 216, 244, 0.2)'
+          }
+        }}
+      >
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
           p: 2,
-          borderBottom: expanded ? '1px solid #e0e0e0' : 'none'
+          borderBottom: expanded ? '1px solid var(--border-color)' : 'none',
+          background: 'linear-gradient(to right, var(--primary-color), var(--success-color))',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h6">
+            <Typography variant="h6" sx={{ 
+              fontWeight: 'bold',
+              color: 'var(--text-primary)',
+              textShadow: '1px 1px 2px rgba(255, 255, 255, 0.5)'
+            }}>
               检测结果
             </Typography>
             {results.length > 0 && (
               <Chip 
                 label={results.length} 
                 size="small" 
-                color="primary" 
-                sx={{ ml: 1 }} 
+                sx={{ 
+                  ml: 1,
+                  backgroundColor: '#ffffff',
+                  color: 'var(--text-primary)',
+                  fontWeight: 'bold'
+                }} 
               />
             )}
           </Box>
@@ -149,7 +178,13 @@ const DetectionResults = ({ results = [], onClearResults }) => {
               <IconButton 
                 size="small" 
                 onClick={handleClearResults} 
-                sx={{ mr: 1 }}
+                sx={{ 
+                  mr: 1,
+                  color: 'var(--text-primary)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.5)'
+                  }
+                }}
                 title="清空检测结果"
               >
                 <DeleteIcon />
@@ -159,6 +194,12 @@ const DetectionResults = ({ results = [], onClearResults }) => {
               size="small" 
               onClick={toggleExpanded}
               title={expanded ? "收起" : "展开"}
+              sx={{ 
+                color: 'var(--text-primary)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.5)'
+                }
+              }}
             >
               {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </IconButton>
@@ -166,7 +207,7 @@ const DetectionResults = ({ results = [], onClearResults }) => {
         </Box>
         
         <Collapse in={expanded}>
-          <Box sx={{ maxHeight: '300px', overflow: 'auto' }}>
+          <Box sx={{ maxHeight: '300px', overflow: 'auto', backgroundColor: 'var(--card-color)' }}>
             {results.length === 0 ? (
               <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography color="text.secondary">
@@ -177,22 +218,35 @@ const DetectionResults = ({ results = [], onClearResults }) => {
               <List dense>
                 {results.map((item, index) => (
                   <React.Fragment key={index}>
-                    <ListItem>
+                    <ListItem sx={{ 
+                      transition: 'background-color 0.2s ease', 
+                      '&:hover': { 
+                        backgroundColor: 'var(--hover-color)' 
+                      } 
+                    }}>
                       <ListItemText
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                            <Typography variant="subtitle1">
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>
                               {getChineseName(item.label)}
                             </Typography>
                             <Chip 
                               label={getCategory(item.label)} 
                               size="small" 
-                              color={getCategoryColor(item.label)}
+                              sx={{ 
+                                fontWeight: 'bold', 
+                                backgroundColor: categoryColorMap[getCategory(item.label)] || 'var(--warning-color)',
+                                color: 'white'
+                              }}
                             />
                             <Chip 
                               label={formatConfidence(item.score)} 
                               size="small" 
                               variant="outlined"
+                              sx={{
+                                borderColor: 'var(--border-color)',
+                                color: 'var(--text-secondary)'
+                              }}
                             />
                           </Box>
                         }

@@ -73,4 +73,4 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 ## 效果预览
 
-![preview](assets/images/preview2.png)
+![preview](assets/images/preview3.png)

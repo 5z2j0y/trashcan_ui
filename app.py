@@ -7,6 +7,8 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 import json
 import threading
+import serial
+import time
 
 app = Flask(__name__, static_folder='frontend/build')
 CORS(app)  # 添加CORS支持
@@ -26,6 +28,15 @@ last_cls_id = None
 frame_count = 0
 threshold = 5  # 连续帧数阈值
 
+# 在全局变量区域添加Arduino初始化代码
+try:
+    arduino = serial.Serial('COM3', 9600, timeout=1)
+    time.sleep(2)
+    print("已连接到 Arduino on COM3")
+except Exception as e:
+    arduino = None
+    print(f"无法初始化Arduino连接: {e}")
+
 def send_message(cls_id, score, label):
     # 通过WebSocket发送检测结果
     detection_data = {
@@ -35,6 +46,13 @@ def send_message(cls_id, score, label):
     }
     print(f"发送检测结果: {detection_data}")
     socketio.emit('detection_result', detection_data)
+    # 向Arduino发送检测结果
+    if arduino is not None:
+        try:
+            arduino.write(json.dumps(detection_data).encode('utf-8'))
+            print("已发送检测结果到Arduino")
+        except Exception as e:
+            print(f"发送到Arduino错误: {e}")
 
 def generate_frames(camera_id):
     video_cap = None

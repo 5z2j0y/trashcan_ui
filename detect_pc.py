@@ -1,8 +1,8 @@
 import cv2
 from ultralytics import YOLO
 import argparse
-
-
+import serial
+import time
 
 def main():
     # 解析命令行参数
@@ -14,11 +14,21 @@ def main():
     # 加载模型
     model = YOLO("models/trashcan.pt") 
 
+    # 初始化Arduino串口连接
+    try:
+        arduino = serial.Serial('COM3', 9600, timeout=1)
+        time.sleep(2)
+        print("已连接到 Arduino")
+    except Exception as e:
+        print(f"Arduino连接错误: {e}")
+        arduino = None
+
     def send_message(cls_id, score, label):
-        # 这里可以替换为发送消息的代码
-        print(f"cls_id: {cls_id}")
-        print(f"Score: {score}")
-        print(f"Label: {label}")
+        # 发送检测结果到Arduino
+        message = f"{cls_id},{score:.2f},{label}"
+        print("发送消息:", message)
+        if arduino:
+            arduino.write(message.encode('utf-8'))
 
     # 打开视频捕捉，默认使用摄像头1
     video_cap = cv2.VideoCapture(args.camera)
@@ -62,6 +72,11 @@ def main():
                     send_message(cls_id, score, label)
                     frame_count = 0  # 重置计数器
 
+        # 监听Arduino返回的消息
+        if arduino and arduino.in_waiting > 0:
+            response = arduino.readline().decode('utf-8', errors='replace').strip()
+            print(f"Arduino返回: {response}")
+
         # 如果不是无界面模式，显示图像
         if not args.headless:
             cv2.imshow('Detection', frame)
@@ -71,6 +86,9 @@ def main():
     # 释放资源
     video_cap.release()
     cv2.destroyAllWindows()
+    if arduino:
+        arduino.close()
+        print("Arduino连接已关闭")
 
 if __name__ == "__main__":
     main()

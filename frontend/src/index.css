@@ -1,3 +1,17 @@
+:root {
+  --primary-color: #a3d8f4;      /* 浅蓝色 */
+  --secondary-color: #f7c5c5;    /* 浅粉色 */
+  --success-color: #b5e6b5;      /* 浅绿色 */
+  --warning-color: #ffe3b3;      /* 浅橙色 */
+  --error-color: #ffb6b6;        /* 浅红色 */
+  --background-color: #f8f9fa;
+  --card-color: #ffffff;
+  --text-primary: #555b6e;       /* 柔和的深色 */
+  --text-secondary: #7d8597;     /* 中灰色 */
+  --border-color: #e6e9f0;
+  --hover-color: #f0f5fa;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -5,7 +19,10 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f5f5;
+  background-color: var(--background-color);
+  background-image: linear-gradient(to bottom right, #f8f9fa, #f0f5fa);
+  min-height: 100vh;
+  color: var(--text-primary);
 }
 
 code {

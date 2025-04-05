@@ -57,22 +57,59 @@ const ControlPanel = ({
       elevation={3} 
       sx={{ 
         p: 3, 
-        borderRadius: 2,
-        backgroundColor: '#f9f9f9'
+        borderRadius: '16px',
+        backgroundColor: 'var(--card-color)',
+        boxShadow: '0 6px 16px rgba(163, 216, 244, 0.15)',
+        border: '1px solid var(--border-color)',
+        transition: 'transform 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-5px)'
+        }
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: expanded ? 2 : 0 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: expanded ? 2 : 0,
+        pb: expanded ? 2 : 0,
+        borderBottom: expanded ? '1px solid var(--border-color)' : 'none'
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" gutterBottom sx={{ mb: 0, mr: 2 }}>
+          <Typography 
+            variant="h6" 
+            gutterBottom 
+            sx={{ 
+              mb: 0, 
+              mr: 2, 
+              fontWeight: 'bold', 
+              color: 'var(--text-primary)' 
+            }}
+          >
             摄像头控制面板
           </Typography>
           <Chip 
             label={socketConnected ? "服务已连接" : "服务未连接"} 
             color={socketConnected ? "success" : "error"}
             size="small"
+            sx={{ 
+              fontWeight: 'bold',
+              backgroundColor: socketConnected ? 'var(--success-color)' : 'var(--error-color)',
+              color: 'var(--text-primary)'
+            }}
           />
         </Box>
-        <IconButton onClick={toggleExpanded} size="small">
+        <IconButton 
+          onClick={toggleExpanded} 
+          size="small"
+          sx={{ 
+            color: 'var(--primary-color)', 
+            backgroundColor: 'var(--hover-color)',
+            '&:hover': {
+              backgroundColor: 'var(--border-color)'
+            }
+          }}
+        >
           {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </IconButton>
       </Box>
@@ -88,8 +125,19 @@ const ControlPanel = ({
                 value={currentCameraId}
                 onChange={(e) => onCameraChange(e.target.value)}
                 label="摄像头"
-                startAdornment={<CameraAltIcon sx={{ mr: 1 }} />}
+                startAdornment={<CameraAltIcon sx={{ mr: 1, color: 'var(--primary-color)' }} />}
                 disabled={isDetecting}
+                sx={{
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'var(--border-color)'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'var(--primary-color)'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'var(--primary-color)'
+                  }
+                }}
               >
                 {cameraOptions.map((id) => (
                   <MenuItem key={id} value={id}>
@@ -113,7 +161,14 @@ const ControlPanel = ({
                     size="large"
                     startIcon={<StopIcon />}
                     onClick={onStopDetection}
-                    sx={{ flex: 2 }}
+                    sx={{ 
+                      flex: 2,
+                      backgroundColor: 'var(--secondary-color)',
+                      color: 'var(--text-primary)',
+                      '&:hover': {
+                        backgroundColor: '#f4b8b8'
+                      }
+                    }}
                   >
                     停止检测
                   </Button>
@@ -123,7 +178,15 @@ const ControlPanel = ({
                       color="primary"
                       size="large"
                       onClick={handleRefreshStream}
-                      sx={{ flex: 1 }}
+                      sx={{ 
+                        flex: 1,
+                        borderColor: 'var(--primary-color)',
+                        color: 'var(--text-primary)',
+                        '&:hover': {
+                          borderColor: 'var(--primary-color)',
+                          backgroundColor: 'rgba(163, 216, 244, 0.1)'
+                        }
+                      }}
                     >
                       <RefreshIcon />
                     </Button>
@@ -138,6 +201,15 @@ const ControlPanel = ({
                   onClick={onStartDetection}
                   fullWidth
                   disabled={currentCameraId === null || !socketConnected}
+                  sx={{ 
+                    backgroundColor: 'var(--primary-color)',
+                    color: 'var(--text-primary)',
+                    '&:hover': {
+                      backgroundColor: '#90c7e3'
+                    },
+                    fontWeight: 'bold',
+                    py: 1.2
+                  }}
                 >
                   开始检测
                 </Button>

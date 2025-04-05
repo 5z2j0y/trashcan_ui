@@ -84,8 +84,18 @@ function App() {
     <div className="App">
       <Container maxWidth="lg">
         <Box sx={{ my: 3 }}>
-          <Typography variant="h3" component="h1" align="center" gutterBottom>
-            垃圾检测系统
+          <Typography 
+            variant="h3" 
+            component="h1" 
+            align="center" 
+            gutterBottom
+            sx={{ 
+              letterSpacing: '1px',
+              color: '#333333', // 灰黑色标题
+              fontWeight: 'bold'
+            }}
+          >
+            智能垃圾检测系统
           </Typography>
         </Box>
         
@@ -127,14 +137,24 @@ function App() {
         <Alert 
           onClose={handleCloseNotification} 
           severity={notification.severity} 
-          sx={{ width: '100%' }}
+          sx={{ 
+            width: '100%',
+            boxShadow: '0 4px 12px rgba(163, 216, 244, 0.15)',
+            color: 'var(--text-primary)',
+            backgroundColor: notification.severity === 'success' ? 'rgba(181, 230, 181, 0.9)' : 
+                          notification.severity === 'warning' ? 'rgba(255, 227, 179, 0.9)' : 
+                          notification.severity === 'error' ? 'rgba(255, 182, 182, 0.9)' : 'rgba(163, 216, 244, 0.9)',
+            '& .MuiAlert-icon': {
+              color: 'var(--text-primary)'
+            } 
+          }}
         >
           {notification.message}
         </Alert>
       </Snackbar>
       
-      <footer>
-        <p>智能垃圾分类监测系统 © {new Date().getFullYear()}</p>
+      <footer style={{ backgroundColor: 'var(--hover-color)', borderTop: '1px solid var(--border-color)' }}>
+        <p style={{ color: 'var(--text-secondary)' }}>智能垃圾分类监测系统 © {new Date().getFullYear()}</p>
       </footer>
     </div>
   );
