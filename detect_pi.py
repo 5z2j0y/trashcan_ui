@@ -14,6 +14,31 @@ def main():
     # 加载模型
     model = YOLO("models/trashcan.pt") 
 
+    # 定义垃圾分类映射
+    # 1: 可回收垃圾, 2: 有害垃圾, 3: 厨余垃圾, 4: 其他垃圾
+    trash_category_map = {
+        'bottle': 1,    # 可回收垃圾
+        'brick': 4,     # 其他垃圾
+        'battery': 2,   # 有害垃圾
+        'can': 1,       # 可回收垃圾
+        'carrot': 3,    # 厨余垃圾
+        'china': 4,     # 其他垃圾
+        'paperCup': 4,  # 其他垃圾
+        'pill': 2,      # 有害垃圾
+        'potato': 3,    # 厨余垃圾
+        'radish': 3,    # 厨余垃圾
+        'stone': 4,     # 其他垃圾
+        'potato_chip': 4, # 其他垃圾
+    }
+    
+    # 垃圾分类的中文名称
+    category_names = {
+        1: "可回收垃圾",
+        2: "有害垃圾",
+        3: "厨余垃圾",
+        4: "其他垃圾"
+    }
+
     # 初始化Arduino串口连接
     try:
         arduino = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
@@ -23,12 +48,17 @@ def main():
         print(f"Arduino连接错误: {e}")
         arduino = None
 
-    def send_message(cls_id, score, label):
-        # 发送检测结果到Arduino
-        message = f"{cls_id},{score:.2f},{label}"
-        print("发送消息:", message)
+    def send_message(label, score):
+        # 根据垃圾标签获取分类编号
+        category_id = trash_category_map.get(label, 4)  # 默认为其他垃圾
+        category_name = category_names[category_id]
+        
+        # 发送分类编号到Arduino
+        message = f"{category_id}"
+        print(f"检测到: {label} (置信度: {score:.2f}) - 分类为: {category_name} (编号: {category_id})")
         if arduino:
             arduino.write(message.encode('utf-8'))
+            time.sleep(7)  # 等待Arduino处理数据
 
     # 打开视频捕捉，默认使用摄像头1
     video_cap = cv2.VideoCapture(args.camera)
@@ -37,7 +67,7 @@ def main():
         return
 
     # 初始化变量
-    last_cls_id = None
+    last_label = None
     frame_count = 0
     threshold = 5  # 连续帧数阈值
 
@@ -61,15 +91,15 @@ def main():
                 score = box.conf.item()
                 label = model.names[cls_id]
 
-                # 检测相同的cls_id
-                if cls_id == last_cls_id:
+                # 检测相同的标签
+                if label == last_label:
                     frame_count += 1
                 else:
-                    last_cls_id = cls_id
+                    last_label = label
                     frame_count = 1
                 # 如果连续帧数超过阈值, 发送消息
                 if frame_count >= threshold:
-                    send_message(cls_id, score, label)
+                    send_message(label, score)
                     frame_count = 0  # 重置计数器
 
         # 如果不是无界面模式，显示图像

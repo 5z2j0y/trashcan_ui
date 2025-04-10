@@ -105,7 +105,7 @@ const DetectionResults = ({ results = [], onClearResults }) => {
     return (score * 100).toFixed(1) + '%';
   };
 
-  // 格式化时间
+  // 格式化时间 - 保留函数但不再使用
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString('zh-CN');
@@ -227,8 +227,11 @@ const DetectionResults = ({ results = [], onClearResults }) => {
                       <ListItemText
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                            <Typography variant="body2" sx={{ color: 'grey.500' }}>
+                              （{getChineseName(item.label)}）
+                            </Typography>
                             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                              {getChineseName(item.label)}
+                              {index + 1}
                             </Typography>
                             <Chip 
                               label={getCategory(item.label)} 
@@ -240,20 +243,18 @@ const DetectionResults = ({ results = [], onClearResults }) => {
                               }}
                             />
                             <Chip 
-                              label={formatConfidence(item.score)} 
+                              label="OK!" 
                               size="small" 
-                              variant="outlined"
                               sx={{
-                                borderColor: 'var(--border-color)',
-                                color: 'var(--text-secondary)'
+                                fontWeight: 'bold',
+                                backgroundColor: 'var(--success-color)',
+                                color: 'black'
                               }}
                             />
+                            <Typography variant="body2" sx={{ color: 'grey.500' }}>
+                              （{formatConfidence(item.score)}）
+                            </Typography>
                           </Box>
-                        }
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            检测时间: {formatTime(item.timestamp)}
-                          </Typography>
                         }
                       />
                     </ListItem>
